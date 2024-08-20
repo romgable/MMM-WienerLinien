@@ -79,14 +79,6 @@
                             {{ data.name | shortenText(config.shortenStation) | safe }}
                         </td>
                     </tr>
-                    {#
-                    <tr>
-                        <th class="centered"><i class="fa fa-info"/></th>
-                        <th class="centered"><i class="fa fa-tag"/></th>
-                        <th class="centered"><i class="fa fa-compass"/></th>
-                        <th class="centered"><i class="fa fa-clock-o"/></th>
-                    </tr>
-                    #}
                     {% for departure in data.departures %}
                         <tr>
                             <td class="centered"><i class="fa {{ departure.type | icon }}"/></td>

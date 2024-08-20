@@ -147,8 +147,8 @@ Module.register('MMM-WienerLinien', {
     /**
      * @function getClassicView
      * @description Get all relevant data for template in classic view mode.
-     * 
-     * @returns {boolean} Transformed data object for the classic view.
+     *
+     * @returns {object} Transformed data object for the classic view.
      */
     getClassicView() {
         const keys = Object.keys(this.stations);
@@ -177,16 +177,16 @@ Module.register('MMM-WienerLinien', {
     /**
      * @function getCompactView
      * @description Get all relevant data for template in compact view mode.
-     * 
-     * @returns {boolean} Transformed data object for the compact view.
+     *
+     * @returns {object} Transformed data object for the compact view.
      */
     getCompactView() {
         const stationData = [];
-        
+
         Object.values(this.stations).forEach(station => {
             const { name, departures: allDepartures } = station;
             const transformed = this.transformDepartures(allDepartures);
-            stationData.push({name, departures: transformed});
+            stationData.push({ name, departures: transformed });
         })
 
         return {
@@ -200,14 +200,14 @@ Module.register('MMM-WienerLinien', {
     /**
      * @function transformDepartures
      * @description Transform the departures object for the compact view.
-     * 
-     * @param {*} allDepartures 
-     * @returns {boolean} Array of transformed departures.
+     *
+     * @param {object} allDepartures - Object of all departures
+     * @returns {object} Array of transformed departures.
      */
     transformDepartures(allDepartures) {
         const newData = new Map();
         const { lines, max } = this.config;
-    
+
         // Filter and accumulate data into the map
         for (const dep of allDepartures) {
             if (lines.length === 0 || lines.includes(dep.line)) {
@@ -218,7 +218,7 @@ Module.register('MMM-WienerLinien', {
                 newData.get(key).push(dep.time);
             }
         }
-    
+
         // Transform map entries into the final array format
         const transformed = [];
         for (const [key, times] of newData.entries()) {
@@ -227,7 +227,7 @@ Module.register('MMM-WienerLinien', {
                 time: times.slice(0, max)
             });
         }
-        
+
         return transformed.sort((a, b) => a.line.localeCompare(b.line) || a.towards.localeCompare(b.towards));
     },
 
@@ -241,7 +241,7 @@ Module.register('MMM-WienerLinien', {
     start() {
         Log.info(`Starting module: ${this.name}`);
         moment.locale(config.language);
-        
+
         if (this.config.view === 'classic') {
             this.maxIndex = this.config.stations.length;
             setInterval(() => {
