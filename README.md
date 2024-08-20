@@ -2,9 +2,25 @@
 
 Public Transport of Vienna/Austria Module for MagicMirror<sup>2</sup>
 
-## Example
+## Examples
 
-![Station 1](.github/example.jpg) ![Station 2](.github/example2.jpg) ![Incidents](.github/example3.PNG)
+### Classic View
+
+Periodically rotates between different stations.
+
+![Station 1](.github/example.jpg) ![Station 2](.github/example2.jpg)
+
+### Compact View
+
+Shows all stations in one view without rotating.
+
+![CompactView](.github/example4.png)
+
+### Incidents
+
+Shows incident data (classic view only).
+
+![Incidents](.github/example3.png)
 
 ## Dependencies
 
@@ -35,11 +51,16 @@ Public Transport of Vienna/Austria Module for MagicMirror<sup>2</sup>
 | **Option** | **Default** | **Description** |
 | --- | --- | --- |
 | `stations` | REQUIRED | Insert here the station ids you want to display data from [How to find an ID?](https://till.mabe.at/rbl/). |
+| `view` | `classic` | Switch between `classic` and `compact` view. (See examples) |
+| `lines` | [] | Set a filter to only show your favorite lines (e.g. `["U4", "U1"]`). Leave empty to show all. |
+| `header` | `WienerLinien` | Set the header above the module. Leave empty to hide the header. |
+| `displayIcons` | `true` | Display or hide the icons above the table. |
 | `max` | `5` | How many departures should be displayed. |
 | `shortenStation` | `false` | After how many characters the station name should be cut. Default: show full name. |
 | `shortenDestination` | `false` | After how many characters the destination name should be cut. Default: show full name. |
 | `rotateInterval` | `20000` (20 sec) | How fast should be switched between the stations. |
 | `updateInterval` | `300000` (5 mins) | How often should the data be fetched. |
+| `animationSpeed` | `300` (300 ms) | How fast should the animation on data changes run. |
 | `elevatorStations` | EMPTY  | Insert the station ids where you would like to know elevator disruptions. |
 | `incidentLines` | EMPTY  | Insert the line names for which you would like to know disruptions. |
 | `incidentShort` | `false` | If true, also the changes to lines are displayed (AZBLinienspezialtext [see documentation](https://data.wien.gv.at/pdf/wienerlinien-echtzeitdaten-dokumentation.pdf)), otherwise only current disruptions. |
