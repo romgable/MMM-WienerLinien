@@ -1,5 +1,29 @@
 # MMM-WienerLinien Changelog
 
+## [Unreleased]
+
+MagicMirror² version >= 2.15.0 required.
+
+### Fixed
+
+### Added
+
+- Added bus icon for night bus
+- Integrated MagicMirror logger on server side
+- Github actions `build` and `changelog`
+- Dependency: `lodash`
+
+### Changed
+
+- Project config files
+- Github config files
+- Updated dependencies
+- Updated readme
+
+### Removed
+
+- Removed TravisCI integration
+
 ## [2.0.1]
 
 ### Fixed

@@ -14,19 +14,37 @@
 const fetch = require('node-fetch');
 
 /**
+ * @external lodash
+ * @see https://www.npmjs.com/package/lodash
+ */
+const _ = require('lodash');
+
+/**
  * @external node_helper
  * @see https://github.com/MichMich/MagicMirror/blob/master/js/node_helper.js
  */
 const NodeHelper = require('node_helper');
 
 /**
+ * @external logger
+ * @see https://github.com/MichMich/MagicMirror/blob/master/js/logger.js
+ */
+const Log = require('logger');
+
+/**
  * @module node_helper
  * @description Backend for the module to query data from the API provider.
  *
  * @requires external:node-fetch
+ * @requires external:lodash
  * @requires external:node_helper
+ * @requires external:logger
  */
 module.exports = NodeHelper.create({
+    /** @member {string} requiresVersion - Specifies minimum required version of MagicMirror². */
+    requiresVersion: '2.15.0',
+
+    /** @member {string} baseUrl - Base URL of the API of the data provider. */
     baseUrl: 'https://www.wienerlinien.at/ogd_realtime',
 
     /**
@@ -43,10 +61,10 @@ module.exports = NodeHelper.create({
     socketNotificationReceived(notification, payload) {
         if (notification === 'CONFIG') {
             this.config = payload;
-            this.getData();
-            setInterval(async () => {
-                await this.getData();
+            setInterval(() => {
+                this.getData();
             }, this.config.updateInterval);
+            this.getData();
         }
     },
 
@@ -60,15 +78,15 @@ module.exports = NodeHelper.create({
     async getData() {
         await this.getMonitoringData();
 
-        if (this.config.elevatorStations.length > 0) {
-            const url = `${this.baseUrl}/trafficInfoList?name=aufzugsinfo&relatedStop=${this.config.elevatorStations.join('&relatedStop=')}`;
+        if (!_.isEmpty(this.config.elevatorStations)) {
+            const url = `${this.baseUrl}/trafficInfoList?name=aufzugsinfo&relatedStop=${_.join(this.config.elevatorStations, '&relatedStop=')}`;
 
             await this.getAdditionalData(url, 'Elevator');
         }
 
-        if (this.config.incidentLines.length > 0) {
+        if (!_.isEmpty(this.config.incidentLines.length)) {
             const incidentType = this.config.incidentShort ? 'stoerungkurz' : 'stoerunglang';
-            const url = `${this.baseUrl}/trafficInfoList?name=${incidentType}&relatedLine=${this.config.incidentLines.join('&relatedLine=')}`;
+            const url = `${this.baseUrl}/trafficInfoList?name=${incidentType}&relatedLine=${_.join(this.config.incidentLines, '&relatedLine=')}`;
 
             await this.getAdditionalData(url, 'Incident');
         }
@@ -83,16 +101,16 @@ module.exports = NodeHelper.create({
      */
     async getMonitoringData() {
         try {
-            const response = await fetch(`${this.baseUrl}/monitor?rbl=${this.config.stations.join('&rbl=')}`);
+            const response = await fetch(`${this.baseUrl}/monitor?stopId=${_.join(this.config.stations, '&stopId=')}`);
             const parsedBody = await response.json();
 
-            if (parsedBody.message.value === 'OK') {
+            if (_.get(parsedBody, 'message.value') === 'OK') {
                 this.handleData(parsedBody.data.monitors, parsedBody.message.serverTime);
             } else {
                 throw new Error('No WienerLinien data');
             }
         } catch (e) {
-            console.log('Error getting WienerLinien station data:', e);
+            Log.error('Error getting WienerLinien station data:', e);
         }
     },
 
@@ -111,13 +129,13 @@ module.exports = NodeHelper.create({
             const response = await fetch(url);
             const parsedBody = await response.json();
 
-            if (Object.prototype.hasOwnProperty.call(parsedBody.data, 'trafficInfos')) {
+            if (_.has(parsedBody.data, 'trafficInfos')) {
                 this[`handle${type}Data`](parsedBody.data.trafficInfos);
             } else {
                 throw new Error('No WienerLinien data');
             }
         } catch (e) {
-            console.log(`Error getting WienerLinien data for type ${type}:`, e);
+            Log.error(`Error getting WienerLinien data for type ${type}:`, e);
         }
     },
 
@@ -130,11 +148,10 @@ module.exports = NodeHelper.create({
      * @returns {void}
      */
     handleElevatorData(data = []) {
-        const elevators = data
-            .map(({ title, description }) => `${title}: ${description}`)
-            .sort();
+        const mappedElevators = _.map(data, ({ title, description }) => `${title}: ${description}`);
+        const sortedElevators = _.sortBy(mappedElevators);
 
-        this.sendSocketNotification('ELEVATORS', elevators);
+        this.sendSocketNotification('ELEVATORS', sortedElevators);
     },
 
     /**
@@ -146,14 +163,13 @@ module.exports = NodeHelper.create({
      * @returns {void}
      */
     handleIncidentData(data = []) {
-        const incidents = data
-            .map(({ relatedLines, description }) => ({
-                description,
-                lines: relatedLines.join(', ')
-            }))
-            .sort((a, b) => a.lines.localeCompare(b.lines));
+        const mappedIncidents = _.map(data, ({ relatedLines, description }) => ({
+            description,
+            lines: _.join(relatedLines, ', ')
+        }));
+        const sortedIncidents = _.sortBy(mappedElevators, 'lines');
 
-        this.sendSocketNotification('INCIDENTS', incidents);
+        this.sendSocketNotification('INCIDENTS', sortedIncidents);
     },
 
     /**
@@ -168,62 +184,51 @@ module.exports = NodeHelper.create({
     handleData(data, time) {
         const stations = {};
 
-        for (let i = 0; i < data.length; i += 1) {
-            if (!Object.prototype.hasOwnProperty.call(stations, data[i].locationStop.properties.name)) {
-                stations[data[i].locationStop.properties.name] = {
-                    name: data[i].locationStop.properties.title,
-                    departures: []
-                };
+        for (const entry of data) {
+            const stationName = _.get(entry, 'locationStop.properties.name');
+            if (!_.has(stations, stationName)) {
+                stations[stationName] = { name: _.get(entry, 'locationStop.properties.title'), departures: [] };
             }
-            for (let n = 0; n < data[i].lines.length; n += 1) {
+
+            for (const {departures, name, towards, type} of entry.lines) {
                 let metroFlag = false;
-                for (let x = 0; x < data[i].lines[n].departures.departure.length; x += 1) {
-                    if (Object.keys(data[i].lines[n].departures.departure[x].departureTime).length === 0) {
+
+                for (const departure of departures.departure) {
+                    if (_.isEmpty(_.keys(departure.departureTime))) {
                         metroFlag = true;
                         break;
                     }
 
-                    const { departureTime } = data[i].lines[n].departures.departure[x];
+                    const departureTimeProp = _.has(departure.departureTime, 'timeReal') ? 'timeReal' : 'timePlanned';
 
-                    stations[data[i].locationStop.properties.name].departures.push({
-                        time: departureTime[Object.prototype.hasOwnProperty.call(departureTime, 'timeReal') ? 'timeReal' : 'timePlanned'],
-                        towards: data[i].lines[n].towards,
-                        line: data[i].lines[n].name,
-                        type: data[i].lines[n].type
-                    });
+                    stations[stationName].departures.push({time: departure.departureTime[departureTimeProp], towards, line: name, type});
                 }
+
                 if (metroFlag) {
                     const departureTimePattern = /[0-9]+/g;
-                    const departureTimeMatches = data[i].lines[n].towards.match(departureTimePattern).toString()
-                        .split(',');
+                    const departureTimeMatches = _.split(towards.match(departureTimePattern).toString(), ',');
 
                     const towardsPattern = /^[a-zäöüß ]+/i;
-                    const towardsMatch = data[i].lines[n].towards.match(towardsPattern).toString()
-                        .replace(/ {2,}/g, ' ')
-                        .trim();
+                    const towardsMatch = _.trim(_.replace(towards.match(towardsPattern).toString(), / {2,}/g, ' '));
 
-                    for (let x = 0; x < departureTimeMatches.length; x += 1) {
+                    for (const timeMatch of departureTimeMatches) {
                         const datetime = new Date(time);
                         datetime.setSeconds(0);
-                        datetime.setMinutes(datetime.getMinutes() + departureTimeMatches[x]);
+                        datetime.setMinutes(datetime.getMinutes() + timeMatch);
 
-                        stations[data[i].locationStop.properties.name].departures.push({
+                        stations[stationName].departures.push({
                             time: datetime,
                             towards: towardsMatch,
-                            line: data[i].lines[n].name,
-                            type: data[i].lines[n].type
+                            line: name,
+                            type
                         });
                     }
                 }
             }
         }
 
-        const keys = Object.keys(stations);
-
-        for (let i = 0; i < keys.length; i += 1) {
-            stations[keys[i]].departures = stations[keys[i]].departures.sort((a, b) => {
-                return a.time < b.time ? -1 : (a.time > b.time ? 1 : 0);
-            });
+        for (const stationName in stations) {
+            stations[stationName].departures = _.sortBy(stations[stationName].departures, 'time');
         }
 
         this.sendSocketNotification('STATIONS', stations);
