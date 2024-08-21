@@ -1,4 +1,3 @@
-
 /**
  * @file MMM-WienerLinien.js
  *
@@ -43,7 +42,7 @@ Module.register('MMM-WienerLinien', {
         ptBusNight: 'fa-bus',
         ptTram: 'fa-train',
         ptTramWLB: 'fa-train',
-        ptMetro: 'fa-subway'
+        ptMetro: 'fa-subway',
     },
 
     /**
@@ -75,7 +74,7 @@ Module.register('MMM-WienerLinien', {
         animationSpeed: 300,
         elevatorStations: [],
         incidentLines: [],
-        incidentShort: false
+        incidentShort: false,
     },
 
     /**
@@ -88,7 +87,7 @@ Module.register('MMM-WienerLinien', {
     getTranslations() {
         return {
             en: 'translations/en.json',
-            de: 'translations/de.json'
+            de: 'translations/de.json',
         };
     },
 
@@ -170,7 +169,7 @@ Module.register('MMM-WienerLinien', {
             name,
             config: this.config,
             elevators: this.elevators,
-            incidents: this.incidents
+            incidents: this.incidents,
         };
     },
 
@@ -187,13 +186,13 @@ Module.register('MMM-WienerLinien', {
             const { name, departures: allDepartures } = station;
             const transformed = this.transformDepartures(allDepartures);
             stationData.push({ name, departures: transformed });
-        })
+        });
 
         return {
             stationData,
             config: this.config,
             elevators: this.elevators,
-            incidents: this.incidents
+            incidents: this.incidents,
         };
     },
 
@@ -211,7 +210,11 @@ Module.register('MMM-WienerLinien', {
         // Filter and accumulate data into the map
         for (const dep of allDepartures) {
             if (lines.length === 0 || lines.includes(dep.line)) {
-                const key = JSON.stringify({ towards: dep.towards, line: dep.line, type: dep.type });
+                const key = JSON.stringify({
+                    towards: dep.towards,
+                    line: dep.line,
+                    type: dep.type,
+                });
                 if (!newData.has(key)) {
                     newData.set(key, []);
                 }
@@ -224,11 +227,15 @@ Module.register('MMM-WienerLinien', {
         for (const [key, times] of newData.entries()) {
             transformed.push({
                 ...JSON.parse(key),
-                time: times.slice(0, max)
+                time: times.slice(0, max),
             });
         }
 
-        return transformed.sort((a, b) => a.line.localeCompare(b.line) || a.towards.localeCompare(b.towards));
+        return transformed.sort(
+            (a, b) =>
+                a.line.localeCompare(b.line)
+                || a.towards.localeCompare(b.towards)
+        );
     },
 
     /**
@@ -284,25 +291,43 @@ Module.register('MMM-WienerLinien', {
      * @returns {void}
      */
     addFilters() {
-        this.nunjucksEnvironment().addFilter('timeUntil', time => moment().to(time));
+        this.nunjucksEnvironment().addFilter('timeUntil', time =>
+            moment().to(time)
+        );
 
-        this.nunjucksEnvironment().addFilter('timeShort', time => moment(time).diff(moment(), 'minutes') + '\'');
+        this.nunjucksEnvironment().addFilter(
+            'timeShort',
+            time => moment(time).diff(moment(), 'minutes') + "'"
+        );
 
-        this.nunjucksEnvironment().addFilter('titlecase', text => text.replace(
-            /\w\S*/g,
-            text => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase()
-        ));
+        this.nunjucksEnvironment().addFilter('titlecase', text =>
+            text.replace(
+                /\w\S*/g,
+                text =>
+                    text.charAt(0).toUpperCase()
+                    + text.substring(1).toLowerCase()
+            )
+        );
 
-        this.nunjucksEnvironment().addFilter('icon', type => this.types[type] || 'fa-question');
+        this.nunjucksEnvironment().addFilter(
+            'icon',
+            type => this.types[type] || 'fa-question'
+        );
 
-        this.nunjucksEnvironment().addFilter('isEmpty', array => !array || array.length < 1);
+        this.nunjucksEnvironment().addFilter(
+            'isEmpty',
+            array => !array || array.length < 1
+        );
 
-        this.nunjucksEnvironment().addFilter('shortenText', (text, maxLength) => {
-            if (!maxLength || text.length < maxLength) {
-                return text;
+        this.nunjucksEnvironment().addFilter(
+            'shortenText',
+            (text, maxLength) => {
+                if (!maxLength || text.length < maxLength) {
+                    return text;
+                }
+
+                return `${text.slice(0, maxLength)}&#8230;`;
             }
-
-            return `${text.slice(0, maxLength)}&#8230;`;
-        });
-    }
+        );
+    },
 });
